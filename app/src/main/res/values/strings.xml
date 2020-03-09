@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">GitHubClientForSearchUser</string>
+    <string name="redirection_failed">網路不給力，請稍後在試</string>
+    <string name="search">輸入欲搜尋的用戶名</string>
+    <string name="no_search">查無用戶</string>
+    <string name="not_empty">不得空白</string>
+</resources>
