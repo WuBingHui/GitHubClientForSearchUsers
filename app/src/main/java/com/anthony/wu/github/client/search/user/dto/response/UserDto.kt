@@ -2,7 +2,7 @@ package com.anthony.wu.my.git.dto.response
 
 data class UserDto(
     val incomplete_results: Boolean,
-    val items: List<Item>,
+    val items: MutableList<Item>,
     val total_count: Int
 )
 

@@ -19,24 +19,30 @@ import io.reactivex.subjects.BehaviorSubject
 class UserAdapter(private val context: Context) :
     RecyclerView.Adapter<UserAdapter.ViewHolder>() {
 
-    private val userCallBack = BehaviorSubject.create<String>()
-
-     fun getUserCallBack(): Observable<String> = userCallBack
-
-    companion object {
-        private const val USER_NAME = "userName"
+    private var userList = mutableListOf<Item>()
 
 
-    }
+    fun update(userList: MutableList<Item>) {
 
-    private var userList = listOf<Item>()
+        if(this.userList.isNotEmpty()){
 
-    fun update(userList: List<Item>) {
+            this.userList.addAll(userList)
 
-        this.userList = userList
+        }else{
+
+            this.userList = userList
+
+        }
 
         notifyDataSetChanged()
 
+    }
+
+    fun clearAll(){
+
+        this.userList.clear()
+
+        notifyDataSetChanged()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -66,13 +72,9 @@ class UserAdapter(private val context: Context) :
 
         holder.userName.text = data.login
 
-        holder.itemView.setOnClickListener {
-
-            userCallBack.onNext(data.login)
-
-        }
-
     }
+
+
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 

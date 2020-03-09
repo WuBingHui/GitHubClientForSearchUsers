@@ -2,8 +2,11 @@ package com.anthony.wu.github.client.search.user.koin
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.core.net.toUri
 import com.anthony.wu.github.client.search.user.BuildConfig
+import com.anthony.wu.github.client.search.user.dto.response.ErrorMessageDto
+import com.google.gson.Gson
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.android.ext.koin.androidContext
@@ -12,14 +15,16 @@ import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
+import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 
 val gitModule = module {
-    single { createOkHttpClient() }
+    single { createOkHttpClient(androidContext()) }
 }
 
-fun createOkHttpClient(openInterceptor: Boolean = true): OkHttpClient {
+fun createOkHttpClient(context: Context,openInterceptor: Boolean = true): OkHttpClient {
     val httpClient = OkHttpClient.Builder()
     httpClient.connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -32,26 +37,13 @@ fun createOkHttpClient(openInterceptor: Boolean = true): OkHttpClient {
         )
 
     if (openInterceptor) {
-        httpClient.addInterceptor(RedirectInterceptor())
+        httpClient.addInterceptor(RedirectInterceptor(context))
     }
 
     return httpClient.build()
 }
 
-object Properties {
-    private var id = -1
 
-    fun clearProperties() {
-        this.id = -1
-    }
-
-    fun getId() = id
-
-    fun setToken(id: Int) {
-        this.id = id
-    }
-
-}
 
 inline fun <reified T> createService(okHttpClient: OkHttpClient): T {
     val retrofit = Retrofit.Builder()
@@ -70,20 +62,54 @@ private fun createResponse(chain: Interceptor.Chain, request: Request): Response
 }
 
 
-class RedirectInterceptor : Interceptor {
+class RedirectInterceptor(private val context: Context) : Interceptor {
 
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
 
         val request = chain.request()
-        var response = createResponse(chain, request)
+        val response = createResponse(chain, request)
         when (response.code) {
             in 400..900 -> {
-                throw IOException(response.toString())
+                getResponseBody(response.body)?.let {
+
+                    val responseError = Gson().fromJson(it, ErrorMessageDto::class.java).message
+
+                   throw IOException(responseError)
+
+                }
             }
         }
 
         return response
+
+    }
+
+    private fun getResponseBody(responseBody: ResponseBody?): String? {
+
+        var body: String? = null
+
+        responseBody?.let {
+
+            val contentLength = responseBody.contentLength()
+
+            if (contentLength != 0L) {
+
+                val source = responseBody.source()
+                source.request(Integer.MAX_VALUE.toLong()) // Buffer the entire body.
+                val buffer = source.buffer
+
+                var charset: Charset? = Charset.forName("UTF-8")
+                val contentType = responseBody.contentType()
+                if (contentType != null) {
+                    charset = contentType.charset(Charset.forName("UTF-8"))
+                }
+
+                body = buffer.clone().readString(charset!!)
+            }
+        }
+
+        return body
 
     }
 }
